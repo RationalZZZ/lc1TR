@@ -1,0 +1,2778 @@
+﻿1
+00:00:00,000 --> 00:00:04,842
+[MUSIC]
+
+2
+00:00:04,842 --> 00:00:07,303
+Stanford University.
+
+3
+00:00:07,303 --> 00:00:11,351
+>> Network, there's actually a whole
+class, I think next quarter,
+
+4
+00:00:11,351 --> 00:00:14,590
+on just networks for computer vision.
+
+5
+00:00:14,590 --> 00:00:17,110
+Where they've really
+changed the entire field.
+
+6
+00:00:17,110 --> 00:00:19,310
+In NLP, they've had some impact but
+not as much,
+
+7
+00:00:19,310 --> 00:00:22,610
+which is why we don't have
+the entire lecture on just CNNs.
+
+8
+00:00:22,610 --> 00:00:24,500
+But they are an interesting model family.
+
+9
+00:00:24,500 --> 00:00:30,670
+They are paralyzable, they're very good
+on GPUs, and so we'll sort of look into
+
+10
+00:00:30,670 --> 00:00:34,840
+them in detail today, understand hopefully
+by the end why they're so useful.
+
+11
+00:00:34,840 --> 00:00:40,170
+And fast to implement on GPUs but really
+also give you at least some intuition,
+
+12
+00:00:40,170 --> 00:00:44,170
+to be honest there's much less intuition
+behind some of these very advanced CNN
+
+13
+00:00:44,170 --> 00:00:49,780
+architectures compared to even some of the
+recurrent networks and LSTMs that we had.
+
+14
+00:00:49,780 --> 00:00:54,200
+So we'll actually start today with
+a mini tutorial of Azure and GPUs,
+
+15
+00:00:54,200 --> 00:01:00,390
+we wanna encourage you all to really get
+started on that as soon as possible.
+
+16
+00:01:00,390 --> 00:01:05,616
+Also, thanks everybody for filling out
+the survey I think this one is one
+
+17
+00:01:05,616 --> 00:01:11,714
+of the important take away messages, which
+is overall what do you think of the pace.
+
+18
+00:01:11,714 --> 00:01:16,240
+We're very happy to see that the majority
+are quite happy with the pace.
+
+19
+00:01:16,240 --> 00:01:20,830
+It's kind of impossible with such
+a large class to not be too fast and
+
+20
+00:01:20,830 --> 00:01:26,420
+not too slow for 100% of everybody, sizznce
+people have vastly different backgrounds.
+
+21
+00:01:26,420 --> 00:01:30,780
+Very sorry for
+the little less than a third I think, for
+
+22
+00:01:30,780 --> 00:01:36,480
+whom it's too fast,
+I hope today will be, not quite as fast.
+
+23
+00:01:36,480 --> 00:01:41,520
+And hopefully, in office hours and so
+on we can make up for some of that.
+
+24
+00:01:41,520 --> 00:01:45,230
+So we'll talk about a couple
+of different CNN variants.
+
+25
+00:01:45,230 --> 00:01:50,540
+We'll have a fun research highlight on
+character-aware neural language models.
+
+26
+00:01:50,540 --> 00:01:53,320
+And then, we'll actually also look
+a little bit into tips and tricks that
+
+27
+00:01:53,320 --> 00:01:59,020
+are slightly more practical, and you'll
+observe that these practical details and
+
+28
+00:01:59,020 --> 00:02:03,740
+tricks actually making this particular CNN
+architecture work are super important and
+
+29
+00:02:03,740 --> 00:02:08,750
+without it you really lose 10% or
+so of accuracy.
+
+30
+00:02:08,750 --> 00:02:10,760
+Look at it a little critically.
+
+31
+00:02:10,760 --> 00:02:14,387
+At some of the evaluations that
+are going on in the field, and
+
+32
+00:02:14,387 --> 00:02:18,444
+then I will compare a couple of
+different models which will lead us to
+
+33
+00:02:18,444 --> 00:02:22,856
+a very new model called the
+quasi-recurrent neural network for treaty,
+
+34
+00:02:22,856 --> 00:02:25,440
+which just came out
+a couple of months ago.
+
+35
+00:02:25,440 --> 00:02:28,940
+With that, I’ll do one organization
+slide before we go onto Azure.
+
+36
+00:02:28,940 --> 00:02:33,540
+So project advice office hours, I would
+really encourage everybody who’s doing
+
+37
+00:02:33,540 --> 00:02:37,490
+a project to now come to project
+advice office hours every week.
+
+38
+00:02:37,490 --> 00:02:40,820
+I’ve asked groups that I’m
+mentoring personally to also
+
+39
+00:02:40,820 --> 00:02:42,360
+As a server requirement.
+
+40
+00:02:42,360 --> 00:02:45,280
+Not all the groups were
+able to come every week.
+
+41
+00:02:45,280 --> 00:02:46,930
+I encourage you all to come.
+
+42
+00:02:46,930 --> 00:02:51,674
+I am keeping track of
+whether you're there.
+
+43
+00:02:51,674 --> 00:02:56,619
+So also for everybody who basically is
+still undecided whether they should
+
+44
+00:02:56,619 --> 00:03:01,508
+move on with their project, you'll
+see kind of where PA4 folks should be
+
+45
+00:03:01,508 --> 00:03:06,113
+at in the next week or so, where you
+have to have run some baselines on
+
+46
+00:03:06,113 --> 00:03:09,901
+your data set by now if you're
+doing your final project.
+
+47
+00:03:09,901 --> 00:03:14,266
+If you don't even have your dataset
+ready yet, you can't even run a simple,
+
+48
+00:03:14,266 --> 00:03:19,236
+let's say, bag of vectors, kinda baseline,
+it's starting to be really worrisome,
+
+49
+00:03:19,236 --> 00:03:22,900
+so definitely make sure you
+start running your experiments.
+
+50
+00:03:22,900 --> 00:03:26,410
+Some simple things, baselines, could be
+just any, just could be your regressions.
+
+51
+00:03:26,410 --> 00:03:28,128
+You download some code somewhere, but
+
+52
+00:03:28,128 --> 00:03:30,323
+you need to make sure you
+have your data set ready.
+
+53
+00:03:30,323 --> 00:03:33,340
+Otherwise, it'll be too late.
+
+54
+00:03:33,340 --> 00:03:36,313
+And for
+PA4 folks we actually enforce that with
+
+55
+00:03:36,313 --> 00:03:40,563
+a little additional deadline just
+to make sure you're really all.
+
+56
+00:03:40,563 --> 00:03:44,391
+Going to be able to run it cuz this is
+not one of those things that you can
+
+57
+00:03:44,391 --> 00:03:48,087
+cram really hard and you work 10x and
+so you make 10x to progress
+
+58
+00:03:48,087 --> 00:03:52,530
+because your experiments will take a day
+to run and so you run for one day.
+
+59
+00:03:52,530 --> 00:03:54,380
+Turns out at the end you had a bug and
+
+60
+00:03:54,380 --> 00:03:56,990
+then the deadline was there and
+you have nothing.
+
+61
+00:03:56,990 --> 00:03:58,830
+So it happens every year.
+
+62
+00:03:58,830 --> 00:04:01,920
+And we really want to make sure
+it doesn't happen this year even
+
+63
+00:04:01,920 --> 00:04:02,950
+though we're a bigger class.
+
+64
+00:04:02,950 --> 00:04:05,780
+So we'll talk about that soon.
+
+65
+00:04:05,780 --> 00:04:10,289
+Also, in terms of positive motivation,
+there's actually going to be a really
+
+66
+00:04:10,289 --> 00:04:13,455
+awesome poster session that
+we're putting together,
+
+67
+00:04:13,455 --> 00:04:16,618
+we have corporate sponsors
+that give us some money, and
+
+68
+00:04:16,618 --> 00:04:20,560
+they will allow us to basically give
+out price, have prices for you.
+
+69
+00:04:20,560 --> 00:04:24,394
+We'll make it public, so
+hopefully a lot of folks will show up and
+
+70
+00:04:24,394 --> 00:04:25,940
+check out your research.
+
+71
+00:04:25,940 --> 00:04:30,513
+It's a lot of excitement both from various
+companies, VCs, if you have a really
+
+72
+00:04:30,513 --> 00:04:35,104
+awesome poster, who knows, at the end you
+may have some funding for your start up.
+
+73
+00:04:35,104 --> 00:04:40,186
+And we'll have food also, very nice
+catering, so should be really fun poster
+
+74
+00:04:40,186 --> 00:04:45,200
+session, so hopefully you can be very
+excited about that and your projects.
+
+75
+00:04:45,200 --> 00:04:47,450
+Yeah?
+
+76
+00:04:47,450 --> 00:04:48,765
+Will there be enough food for everybody?
+
+77
+00:04:48,765 --> 00:04:51,430
+>> [LAUGH]
+>> It’s a good question.
+
+78
+00:04:51,430 --> 00:04:52,750
+We’ll spend thousands and
+
+79
+00:04:52,750 --> 00:04:56,400
+thousands of dollars on food we hope
+there will be enough food for everybody.
+
+80
+00:04:56,400 --> 00:04:58,350
+Schein is organizing it she's nodding.
+
+81
+00:04:58,350 --> 00:05:03,737
+Yes.
+
+82
+00:05:03,737 --> 00:05:10,214
+Any other organizational questions
+around the Poster Areas Project.
+
+83
+00:05:10,214 --> 00:05:14,043
+All right,
+then take it away on the GPU side.
+
+84
+00:05:14,043 --> 00:05:15,635
+>> [INAUDIBLE].
+
+85
+00:05:15,635 --> 00:05:17,950
+>> Nope, you're good.
+
+86
+00:05:17,950 --> 00:05:18,840
+>> All right, everyone.
+
+87
+00:05:18,840 --> 00:05:21,390
+This is just intended to be a short
+public service announcement basically
+
+88
+00:05:21,390 --> 00:05:26,520
+about how to get started with Azure and
+why you should get started with Azure.
+
+89
+00:05:26,520 --> 00:05:30,562
+By now, every team should have received
+an email to at least one of your team
+
+90
+00:05:30,562 --> 00:05:35,439
+members, probably to your Stanford, one of
+your Stanford emails, and you'll have this
+
+91
+00:05:35,439 --> 00:05:39,885
+message which is basically an invitation
+to join our CS224N subscription.
+
+92
+00:05:39,885 --> 00:05:43,871
+And using following the instructions
+of this email you should sign up for
+
+93
+00:05:43,871 --> 00:05:45,188
+basically GPU access.
+
+94
+00:05:45,188 --> 00:05:50,456
+So far only 161 people have signed up or
+teams have signed up out of the 311,
+
+95
+00:05:50,456 --> 00:05:54,717
+and essentially we want this number
+to increase because everyone
+
+96
+00:05:54,717 --> 00:05:59,540
+should be using GPUs for
+reasons that we'll cover very shortly.
+
+97
+00:05:59,540 --> 00:06:02,050
+And if you have any issues signing up,
+
+98
+00:06:02,050 --> 00:06:07,160
+then please report the problems
+that you have to Piazza post 1830,
+
+99
+00:06:07,160 --> 00:06:12,470
+which has the form, also screenshotted
+there and we'll help you, essentially,
+
+100
+00:06:12,470 --> 00:06:16,580
+through any of the problems that you
+have with their subscriptions, cool.
+
+101
+00:06:16,580 --> 00:06:19,120
+So then, more important question that
+we're gonna go over is why should you
+
+102
+00:06:19,120 --> 00:06:20,700
+really care about the GPUs.
+
+103
+00:06:20,700 --> 00:06:24,990
+Well, first, yesterday we actually
+announced the milestone for
+
+104
+00:06:24,990 --> 00:06:27,160
+the final project and the homework.
+
+105
+00:06:27,160 --> 00:06:29,230
+It's intended to be something
+very quick and easy,
+
+106
+00:06:29,230 --> 00:06:30,880
+just a paragraph of what you've done.
+
+107
+00:06:30,880 --> 00:06:35,250
+But we expect you to have used I always
+experimented with running some code on
+
+108
+00:06:35,250 --> 00:06:36,810
+a GPU like that and
+
+109
+00:06:36,810 --> 00:06:41,890
+this will be worth essentially 2% of your
+final grade just if you do it or not.
+
+110
+00:06:41,890 --> 00:06:45,940
+But really down there the better reason
+of why you should be using GPU's
+
+111
+00:06:45,940 --> 00:06:52,180
+is GPU's will train your models much, much
+faster over a much, much larger data set.
+
+112
+00:06:52,180 --> 00:06:54,900
+And specifically,
+Microsoft has offered us,
+
+113
+00:06:54,900 --> 00:06:58,910
+I think 311 MB6 instances
+on their 0 cloud.
+
+114
+00:06:58,910 --> 00:07:02,957
+These use Tesla GPU's, M60,
+if you're interested in the model.
+
+115
+00:07:02,957 --> 00:07:06,575
+The specifications are,
+they have a huge number of CUDA cores,
+
+116
+00:07:06,575 --> 00:07:11,600
+a huge amount of graphics memory, and
+they cost a huge amount of money each.
+
+117
+00:07:11,600 --> 00:07:12,690
+You also get a nice CPU,
+
+118
+00:07:12,690 --> 00:07:16,640
+as well as a lot of system memory,
+to go along with your Instance.
+
+119
+00:07:16,640 --> 00:07:19,930
+And the key takeaway here
+is that these ar not your
+
+120
+00:07:19,930 --> 00:07:23,420
+average hardware that you
+have in your local machine.
+
+121
+00:07:23,420 --> 00:07:26,390
+There's gonna be way more power, in terms
+of the CPU, in terms of the GPU, and
+
+122
+00:07:26,390 --> 00:07:32,420
+in terms of well, even for the gaming
+whatever hardware you have at home.
+
+123
+00:07:32,420 --> 00:07:35,330
+And the speed-ups will be 10 to 20,
+maybe even 100,
+
+124
+00:07:35,330 --> 00:07:38,170
+depending on the libraries
+that you're running.
+
+125
+00:07:38,170 --> 00:07:42,627
+So in conclusion, please do get started
+on Azure as soon as possible, fill out
+
+126
+00:07:42,627 --> 00:07:46,542
+the form if you run into subscription
+issues, come to office hours or
+
+127
+00:07:46,542 --> 00:07:51,831
+file support tickets if you have technical
+problems such as not being able to etc.
+
+128
+00:07:51,831 --> 00:07:57,019
+And then, also see our step-by-step guide
+to just get started with the process.
+
+129
+00:07:57,019 --> 00:07:59,260
+For Homework 4,
+
+130
+00:07:59,260 --> 00:08:02,730
+The full assignment handout will go
+over essentially all the details.
+
+131
+00:08:02,730 --> 00:08:05,728
+But decent models will
+take a long time to train.
+
+132
+00:08:05,728 --> 00:08:09,850
+They'll take one hour plus per epoch,
+even on a strong GPU,
+
+133
+00:08:09,850 --> 00:08:12,050
+such as the previously described ones.
+
+134
+00:08:12,050 --> 00:08:14,980
+If you don't deal with a GPU,
+you'll be spending a week, basically,
+
+135
+00:08:14,980 --> 00:08:17,970
+just to train a baseline model.
+
+136
+00:08:17,970 --> 00:08:23,950
+And for the final project, if your project
+is sufficiently challenging that needs,
+
+137
+00:08:23,950 --> 00:08:28,110
+well, you have enough data or your problem
+is sufficiently challenging, you really do
+
+138
+00:08:28,110 --> 00:08:31,920
+want to use a GPU if you want to
+receive a good score in this class.
+
+139
+00:08:31,920 --> 00:08:33,410
+And that would be all.
+
+140
+00:08:33,410 --> 00:08:37,298
+>> Cool.
+Thanks, James.
+
+141
+00:08:37,298 --> 00:08:40,823
+And by decent model he also means
+decent implementations, so if your
+
+142
+00:08:40,823 --> 00:08:44,860
+implementations isn't super well-optimized
+it will take you even longer.
+
+143
+00:08:44,860 --> 00:08:50,510
+So again, not something you can cram on
+in the last couple of days of the class.
+
+144
+00:08:50,510 --> 00:08:59,672
+All right, any questions about Azure or
+[INAUDIBLE]?
+
+145
+00:08:59,672 --> 00:09:21,310
+What if we're not in the same group
+between homework three and four?
+
+146
+00:09:21,310 --> 00:09:25,947
+So recurrent neural networks were
+pretty awesome and are pretty awesome
+
+147
+00:09:25,947 --> 00:09:30,673
+actually and a lot of times the default
+model, but they have some issues.
+
+148
+00:09:30,673 --> 00:09:36,150
+Namely, they can't really
+capture phrases in isolation.
+
+149
+00:09:36,150 --> 00:09:41,530
+They can really only capture a phrase
+given it's left side context.
+
+150
+00:09:41,530 --> 00:09:43,690
+So what do we mean by this?
+
+151
+00:09:43,690 --> 00:09:49,040
+If I want to have just a representation
+of my birth, in this whole sentence,
+
+152
+00:09:49,040 --> 00:09:54,080
+well recurrent network will
+always go from left to right.
+
+153
+00:09:54,080 --> 00:09:58,450
+And so, that phrase vector up there
+isn't going to just capture my birth,
+
+154
+00:09:58,450 --> 00:10:00,980
+it will also capture the country of.
+
+155
+00:10:00,980 --> 00:10:03,780
+And so, sometimes when you have
+simple classification problems
+
+156
+00:10:03,780 --> 00:10:07,040
+you might actually just want to
+identify that there's a certain word or
+
+157
+00:10:07,040 --> 00:10:10,830
+phrase in that over all document and
+just try to give
+
+158
+00:10:10,830 --> 00:10:15,330
+the fact that that phrase exist in your
+overall document to somewhere higher up in
+
+159
+00:10:15,330 --> 00:10:18,220
+the final classifier that
+actually needs to classify this.
+
+160
+00:10:18,220 --> 00:10:20,920
+But here,
+you will always go from left to right or
+
+161
+00:10:20,920 --> 00:10:24,370
+even if you have a bidirectional one,
+you go from right to left.
+
+162
+00:10:24,370 --> 00:10:27,220
+But then you have the same problem,
+but on the other side.
+
+163
+00:10:27,220 --> 00:10:29,340
+Namely, the intermediate,
+
+164
+00:10:29,340 --> 00:10:32,660
+the words in the center of
+a longer document might get lost.
+
+165
+00:10:32,660 --> 00:10:36,040
+You really have to keep track
+of them through every iteration.
+
+166
+00:10:36,040 --> 00:10:38,910
+And, of course, if you're using
+LSTMs are better at doing that,
+
+167
+00:10:38,910 --> 00:10:43,210
+they're better able to say,
+don't turn on the forget gate,
+
+168
+00:10:43,210 --> 00:10:46,390
+keep some things around, keep certain
+units on when you see something.
+
+169
+00:10:46,390 --> 00:10:51,480
+But it requires a lot of the model
+to be able to do that perfectly.
+
+170
+00:10:51,480 --> 00:10:55,890
+And so, in many of the cases you will see
+your classifiers only at the very end,
+
+171
+00:10:55,890 --> 00:11:00,340
+once it has read the whole sentence and
+that is not the issue cuz now,
+
+172
+00:11:00,340 --> 00:11:02,680
+again, the grading has
+to flow through this.
+
+173
+00:11:02,680 --> 00:11:06,870
+And despite all the [INAUDIBLE] and LSTM,
+it's even hard for them to keep very
+
+174
+00:11:06,870 --> 00:11:13,700
+complex kinds of relationships alive
+over many, many different time steps.
+
+175
+00:11:13,700 --> 00:11:20,240
+So that's one issue with RNNs
+that CNNs are trying to resolve.
+
+176
+00:11:20,240 --> 00:11:25,290
+Now, the main idea here is instead of
+computing a single representation of
+
+177
+00:11:25,290 --> 00:11:30,341
+vector at every time step that captures
+basically the context on the left so
+
+178
+00:11:30,341 --> 00:11:33,787
+far what if we could just
+compute a phrase vector for
+
+179
+00:11:33,787 --> 00:11:37,258
+every single phrase that
+we have in this sentence.
+
+180
+00:11:37,258 --> 00:11:41,641
+So if we have here the phrase a country
+of my birth, we might compute
+
+181
+00:11:41,641 --> 00:11:46,574
+in the very first step of this kinds
+of convolutional networks if vector for
+
+182
+00:11:46,574 --> 00:11:50,220
+the country just this
+two words in isolation.
+
+183
+00:11:50,220 --> 00:11:56,540
+Just country of my birth so
+basically compute a vector for
+
+184
+00:11:56,540 --> 00:11:59,780
+all the by grams in the sentence and
+then another one maybe for
+
+185
+00:11:59,780 --> 00:12:04,450
+all the trigrams,
+country of my birth, the country.
+
+186
+00:12:04,450 --> 00:12:08,780
+And then, for all the fourgrams,
+the country of my birth.
+
+187
+00:12:08,780 --> 00:12:11,083
+So hoping that if this was, for instance,
+
+188
+00:12:11,083 --> 00:12:15,300
+sentiment classification, that one of
+these said, not very good, for instance.
+
+189
+00:12:15,300 --> 00:12:20,410
+And then, if we captured that vector and
+we kind of will try to eventually.
+
+190
+00:12:20,410 --> 00:12:24,260
+Handle and push that vector all
+the way to a softmax through some
+
+191
+00:12:24,260 --> 00:12:26,230
+other forms that I'll describe soon.
+
+192
+00:12:26,230 --> 00:12:29,110
+But that is basically the idea
+of the very first layer
+
+193
+00:12:29,110 --> 00:12:32,160
+of a convolutional network for NLP.
+
+194
+00:12:32,160 --> 00:12:35,340
+And this will basically compute
+
+195
+00:12:35,340 --> 00:12:38,580
+these phrase vectors regardless of
+whether that is a grammatical phrase.
+
+196
+00:12:38,580 --> 00:12:43,640
+So we know from parsing, for instance,
+certain phrases like a country
+
+197
+00:12:43,640 --> 00:12:48,612
+of is not really a proper noun phrase,
+it's sort of an odd,
+
+198
+00:12:48,612 --> 00:12:54,330
+ungrammatical chunk but this motto
+really doesn't care linguistic or
+
+199
+00:12:54,330 --> 00:12:57,780
+cognitive possibility in any
+kind of way for language.
+
+200
+00:12:57,780 --> 00:13:02,710
+And so, people don't read sentences
+that way, but you might be
+
+201
+00:13:02,710 --> 00:13:06,900
+able to eventually compute several of
+these representations in parallel.
+
+202
+00:13:06,900 --> 00:13:09,970
+And that's going to be a big advantage.
+
+203
+00:13:09,970 --> 00:13:13,002
+So once we compute all these vectors,
+
+204
+00:13:13,002 --> 00:13:17,849
+we'll group them after, but
+we'll get to that in a second.
+
+205
+00:13:17,849 --> 00:13:20,838
+So you might ask,
+what is convolution, anyway?
+
+206
+00:13:20,838 --> 00:13:26,880
+And so, here is a very simple definition
+for any convolutional operator.
+
+207
+00:13:26,880 --> 00:13:31,835
+So let's look at the simplest
+case of a 1d discrete convolution
+
+208
+00:13:31,835 --> 00:13:37,795
+of a filter over another function,
+at a specific point in time.
+
+209
+00:13:37,795 --> 00:13:41,245
+You'll basically have a filter size,
+here M, and
+
+210
+00:13:41,245 --> 00:13:47,035
+you'll basically multiply just a filter
+at different locations of this input.
+
+211
+00:13:47,035 --> 00:13:52,402
+And so, in computer vision, that will
+help us to extract very meaningful
+
+212
+00:13:52,402 --> 00:13:57,959
+features such as edges from an image and
+eventually more complex features.
+
+213
+00:13:57,959 --> 00:14:02,724
+And for 2d example, which you'll observe
+a lot in computer vision, we have this
+
+214
+00:14:02,724 --> 00:14:07,421
+really great animation here from the
+Stanford Unsupervised Feature Learning and
+
+215
+00:14:07,421 --> 00:14:09,680
+Deep Learning wiki page.
+
+216
+00:14:09,680 --> 00:14:12,526
+So imagine you had an image
+that you see here in green.
+
+217
+00:14:12,526 --> 00:14:15,190
+And that image, let's say, is only binary.
+
+218
+00:14:15,190 --> 00:14:20,455
+The first row of this image is 1, 1,
+1, 0, 0 and the second row of pixels
+
+219
+00:14:20,455 --> 00:14:25,727
+of this binary image is 0, 1, 1, 1,
+0 and so on, and you have a filter.
+
+220
+00:14:25,727 --> 00:14:31,535
+And this filter here has number that
+you'll see in the small red font here, and
+
+221
+00:14:31,535 --> 00:14:37,175
+I’ll turn the animation off for a second
+so we can look at it without moving.
+
+222
+00:14:37,175 --> 00:14:44,126
+Now, the filter here is basically 1,
+0, 1, 0, 1, 0, 1, 0, 1.
+
+223
+00:14:44,126 --> 00:14:48,125
+And now every time step
+of the convolution,
+
+224
+00:14:48,125 --> 00:14:55,598
+we’re going to multiply the numbers of
+the filter with the numbers off the image.
+
+225
+00:14:55,598 --> 00:15:00,093
+We multiply, again,
+the red numbers from the filter with the,
+
+226
+00:15:00,093 --> 00:15:03,840
+images, with the image values and
+that will result,
+
+227
+00:15:03,840 --> 00:15:07,435
+basically multiply all of
+them then we sum them up.
+
+228
+00:15:07,435 --> 00:15:12,303
+So very simple in our product if we were
+to vectorize these three by three blocks
+
+229
+00:15:12,303 --> 00:15:16,877
+into, and nine dimensional vector and
+we just have a simple inner product
+
+230
+00:15:16,877 --> 00:15:21,910
+between those two vectors or we just
+multiply them here and then sum them up.
+
+231
+00:15:21,910 --> 00:15:27,381
+So one times one plus one times zero plus
+one times one and so on will sum to four.
+
+232
+00:15:27,381 --> 00:15:31,664
+And we'll basically move
+this filter one time step,
+
+233
+00:15:31,664 --> 00:15:37,640
+one pixel at a time across the image.
+
+234
+00:15:37,640 --> 00:15:42,040
+So let's look again, this looks like
+basically multiply all the numbers and
+
+235
+00:15:42,040 --> 00:15:43,120
+then sum them up.
+
+236
+00:15:43,120 --> 00:15:49,320
+And then, we'll move one down, and
+again move from left to right.
+
+237
+00:15:49,320 --> 00:15:56,106
+Any questions, yeah?
+
+238
+00:15:56,106 --> 00:15:57,210
+That's a great question.
+
+239
+00:15:57,210 --> 00:15:59,930
+What would be the equivalent
+of a pixel in LP and
+
+240
+00:15:59,930 --> 00:16:03,170
+yes, you're exactly right,
+it will be a word vector.
+
+241
+00:16:03,170 --> 00:16:04,075
+Before I jump there,
+
+242
+00:16:04,075 --> 00:16:10,423
+are there any more questions about the
+general definition of convolution, yeah?
+
+243
+00:16:10,423 --> 00:16:13,767
+How do we decide on the convolution?
+
+244
+00:16:13,767 --> 00:16:16,490
+So how do we decide what matrix it is?
+
+245
+00:16:16,490 --> 00:16:19,160
+The matrix of the convolution
+of filter here,
+
+246
+00:16:19,160 --> 00:16:21,230
+these red numbers are actually
+going to be learned.
+
+247
+00:16:21,230 --> 00:16:25,270
+So you have an input and then you do
+back propagation through a network,
+
+248
+00:16:25,270 --> 00:16:28,320
+we'll get to eventually it'll have
+the same kind of cross entropy error,
+
+249
+00:16:28,320 --> 00:16:29,800
+that we have for all the other ones.
+
+250
+00:16:29,800 --> 00:16:31,100
+It'll have a softmax and
+
+251
+00:16:31,100 --> 00:16:34,640
+we're going to basically back propagate
+through this entire architecture, and
+
+252
+00:16:34,640 --> 00:16:38,880
+then we'll actually update the weights
+here in this particular example in red.
+
+253
+00:16:38,880 --> 00:16:40,930
+After they started with
+some random initialization.
+
+254
+00:16:40,930 --> 00:16:42,540
+And then we'll update them and
+they'll change.
+
+255
+00:16:42,540 --> 00:16:44,650
+And what's kind of interesting
+in computer vision,
+
+256
+00:16:44,650 --> 00:16:48,510
+which I won't go into too many details in
+this class, but in computer vision they
+
+257
+00:16:48,510 --> 00:16:52,340
+learn eventually to detect
+certain edges in the first layer.
+
+258
+00:16:52,340 --> 00:16:56,330
+In the second layer they'll learn to
+detect certain combinations of edges like
+
+259
+00:16:56,330 --> 00:17:01,240
+corners, and the third layer they
+will learn to basically detect and
+
+260
+00:17:01,240 --> 00:17:04,780
+have a very high activation,
+these guys here.
+
+261
+00:17:04,780 --> 00:17:09,220
+A very high activation when you see
+
+262
+00:17:09,220 --> 00:17:11,670
+more complex patterns like stripes and
+things like that.
+
+263
+00:17:11,670 --> 00:17:14,680
+And as you go higher up through
+convolution networks and computer vision,
+
+264
+00:17:14,680 --> 00:17:17,850
+you can actually very nicely
+visualize what's going on, and
+
+265
+00:17:17,850 --> 00:17:21,810
+you identify, like the fifth layer
+some neurons actually fire when,
+
+266
+00:17:21,810 --> 00:17:25,240
+they see a combination of eyes and
+a nose and a mouth.
+
+267
+00:17:25,240 --> 00:17:27,200
+Sadly, for NLP we don't have any of that.
+
+268
+00:17:27,200 --> 00:17:30,590
+It's one of the reason's they're
+not quite as popular in NLP.
+
+269
+00:17:30,590 --> 00:17:33,660
+Yep.
+
+270
+00:17:33,660 --> 00:17:35,642
+Sure, so you have here m, you filter.
+
+271
+00:17:35,642 --> 00:17:39,810
+So in the 1d case, that'll just be, f and
+
+272
+00:17:39,810 --> 00:17:44,510
+g are just a single number, and
+now you're going to move over f.
+
+273
+00:17:44,510 --> 00:17:47,240
+So imagine this was just one dimension.
+
+274
+00:17:47,240 --> 00:17:52,062
+And so you move from minus M to M,
+as in for the nth time step,
+
+275
+00:17:52,062 --> 00:17:56,406
+you're going to multiply the filter,
+g[m] here,
+
+276
+00:17:56,406 --> 00:18:01,618
+over this function input, and
+basically go one times step, and
+
+277
+00:18:01,618 --> 00:18:06,955
+you sum up this product between
+the two numbers at each time step.
+
+278
+00:18:06,955 --> 00:18:08,470
+Does that make sense?
+
+279
+00:18:08,470 --> 00:18:12,480
+So you go from minus m,
+which if this is minus and
+
+280
+00:18:12,480 --> 00:18:17,592
+this is minus, so you start head of n,
+n time steps away, and
+
+281
+00:18:17,592 --> 00:18:23,560
+then you keep multiplying the numbers
+until you have the whole sum.
+
+282
+00:18:23,560 --> 00:18:26,255
+And then you have your convolution
+at that discrete time step n.
+
+283
+00:18:26,255 --> 00:18:33,356
+>> [INAUDIBLE]
+>> That's right, m is your window size.
+
+284
+00:18:33,356 --> 00:18:36,840
+And we'll go over the exact examples for
+NLP in much more detail.
+
+285
+00:18:36,840 --> 00:18:39,276
+Yeah.
+
+286
+00:18:39,276 --> 00:18:41,930
+How do we figure out the window size?
+
+287
+00:18:41,930 --> 00:18:44,980
+We'll actually have a bunch of window
+sizes, so maybe this is a good side way
+
+288
+00:18:44,980 --> 00:18:48,170
+to talk about the actual
+model that we'll use for NLP.
+
+289
+00:18:48,170 --> 00:18:50,303
+So this is going to be the first and
+
+290
+00:18:50,303 --> 00:18:53,975
+most simple variant of
+a convolutional network for NLP.
+
+291
+00:18:53,975 --> 00:18:56,792
+You can [INAUDIBLE] go to town and
+towards the end they'll,
+
+292
+00:18:56,792 --> 00:19:01,000
+show you some examples of how we can
+embellish this architecture a lot more.
+
+293
+00:19:01,000 --> 00:19:05,660
+This one is based on a really seminal
+paper by Collobert and Weston from 2011.
+
+294
+00:19:05,660 --> 00:19:10,183
+And then the very particular model
+in its various queuing details,
+
+295
+00:19:10,183 --> 00:19:13,950
+came from Kim from just three years ago.
+
+296
+00:19:13,950 --> 00:19:16,890
+Basically the paper title is,
+a Convolutional Neural Network for
+
+297
+00:19:16,890 --> 00:19:18,440
+Sentence Classification.
+
+298
+00:19:18,440 --> 00:19:21,690
+All right, so as with every model out
+there, whenever you wanna write down your
+
+299
+00:19:21,690 --> 00:19:25,770
+equations, no worries, we're not gonna
+go into a lot more derivatives today.
+
+300
+00:19:25,770 --> 00:19:27,075
+Actually no derivatives,
+
+301
+00:19:27,075 --> 00:19:30,830
+cuz all the math is really similar
+to math we've done before.
+
+302
+00:19:30,830 --> 00:19:34,870
+But it's really still important to
+identify very clearly your notation.
+
+303
+00:19:34,870 --> 00:19:36,210
+So let's start.
+
+304
+00:19:36,210 --> 00:19:39,690
+As the question was correctly asked,
+we'll actually start with word vectors.
+
+305
+00:19:39,690 --> 00:19:44,720
+So we'll have at every time step,
+I will have a word vector Xi.
+
+306
+00:19:44,720 --> 00:19:49,700
+And that will be here for
+us now a k dimensional vector.
+
+307
+00:19:49,700 --> 00:19:54,050
+And then we'll represent the entire
+sentence through a concatenation.
+
+308
+00:19:54,050 --> 00:19:58,200
+So we'll use this plus and
+
+309
+00:19:58,200 --> 00:20:03,380
+circle symbol, for concatenating
+the vectors of all the words.
+
+310
+00:20:03,380 --> 00:20:08,366
+And so we'll describe the entire sentence,
+which we'll have for
+
+311
+00:20:08,366 --> 00:20:12,651
+our definition here,
+n-many words to be X from one to n.
+
+312
+00:20:12,651 --> 00:20:17,410
+And that will be the concatenation
+of the first to the nth word vector.
+
+313
+00:20:17,410 --> 00:20:21,136
+Yeah.
+
+314
+00:20:21,136 --> 00:20:23,440
+Great question,
+are word vectors concatenated length-wise?
+
+315
+00:20:23,440 --> 00:20:24,020
+Yes.
+
+316
+00:20:24,020 --> 00:20:34,058
+For now we'll assume they're
+all concatenated as a long row.
+
+317
+00:20:34,058 --> 00:20:38,247
+All right now we'll introduce
+this additional notation here, so
+
+318
+00:20:38,247 --> 00:20:43,105
+we don't just go from one to n, but
+we might actually want to extract specific
+
+319
+00:20:43,105 --> 00:20:46,689
+words in the range,
+from time step i to time step i plus j,
+
+320
+00:20:46,689 --> 00:20:50,050
+or in general some other
+number of time steps.
+
+321
+00:20:50,050 --> 00:20:54,980
+So if I have, for instance x two to four,
+then I'll take the second, the third,
+
+322
+00:20:54,980 --> 00:20:56,540
+and the fourth word vector, and
+
+323
+00:20:56,540 --> 00:21:04,476
+I just have a long vector with just those
+three word vectors concatenated together.
+
+324
+00:21:04,476 --> 00:21:07,049
+I'll let that sink in,
+cuz it's all very simple but
+
+325
+00:21:07,049 --> 00:21:11,180
+we just need to make sure we
+keep track of the notation.
+
+326
+00:21:11,180 --> 00:21:16,081
+So in general, our convolutional
+filter here will be a vector w
+
+327
+00:21:16,081 --> 00:21:20,797
+of parameters, that we're going
+to learn with our standard
+
+328
+00:21:20,797 --> 00:21:25,621
+stochastic gradient descent-type
+optimization methods.
+
+329
+00:21:25,621 --> 00:21:29,362
+And we'll define this
+convolutional filter here,
+
+330
+00:21:29,362 --> 00:21:33,970
+in terms of its window size and
+of course the word vector size.
+
+331
+00:21:33,970 --> 00:21:37,270
+So h times k, so this is just a vector,
+it's not a matrix.
+
+332
+00:21:37,270 --> 00:21:39,090
+There's no times in between the two.
+
+333
+00:21:39,090 --> 00:21:42,120
+But let's say we want to have
+a convolutional filter that at
+
+334
+00:21:42,120 --> 00:21:46,610
+each time step, looks at three different
+word vectors and tries to combine
+
+335
+00:21:46,610 --> 00:21:50,440
+them into a single number, or
+some kind of feature representation.
+
+336
+00:21:50,440 --> 00:21:55,370
+What we'll then do is,
+basically have a three
+
+337
+00:21:55,370 --> 00:22:00,940
+times number of dimensions
+of each word vector filter.
+
+338
+00:22:00,940 --> 00:22:04,460
+So I have a very simple example here.
+
+339
+00:22:04,460 --> 00:22:07,590
+Let's say we have two dimensional
+word vectors, of course just for
+
+340
+00:22:07,590 --> 00:22:10,020
+illustration they'll usually
+be 50 dimensional or so.
+
+341
+00:22:10,020 --> 00:22:12,300
+Let's say we have two
+dimensional word vectors, and
+
+342
+00:22:12,300 --> 00:22:17,910
+we look at three different words in
+concatenation at each time step,
+
+343
+00:22:17,910 --> 00:22:27,024
+we'll basically have
+a six dimensional w here.
+
+344
+00:22:27,024 --> 00:22:30,386
+All right.
+
+345
+00:22:30,386 --> 00:22:36,640
+So now how do we actually compute
+anything and why is it a neural network?
+
+346
+00:22:36,640 --> 00:22:39,315
+We'll have some non-linearity
+here eventually.
+
+347
+00:22:39,315 --> 00:22:43,210
+Okay but before we get there,
+let's look at again,
+
+348
+00:22:43,210 --> 00:22:48,765
+we have our convolutional filter,
+goes looks at h words at each time step.
+
+349
+00:22:48,765 --> 00:22:53,035
+And again note that w here is
+just a single vector; just as
+
+350
+00:22:53,035 --> 00:22:56,645
+our word vectors are also
+concatenated into a single vector.
+
+351
+00:22:56,645 --> 00:23:01,705
+And now in order to compute
+a feature at one time step for this,
+
+352
+00:23:01,705 --> 00:23:06,065
+what we're going to do is basically just
+have an inner product of this w vector of
+
+353
+00:23:06,065 --> 00:23:12,320
+parameters, times the i-th time
+step plus our window size.
+
+354
+00:23:12,320 --> 00:23:16,902
+So in this case here,
+we're going to in the c one for
+
+355
+00:23:16,902 --> 00:23:22,027
+instance, we'll have W times x one two,
+one two three.
+
+356
+00:23:22,027 --> 00:23:23,946
+So we have here three, so
+one plus three minus one goes to three.
+
+357
+00:23:23,946 --> 00:23:28,877
+So we basically just have
+the concatenation of those word
+
+358
+00:23:28,877 --> 00:23:31,228
+vectors in our product.
+
+359
+00:23:31,228 --> 00:23:39,220
+Simple sort of multiplication and
+sum of all the element wise.
+
+360
+00:23:39,220 --> 00:23:40,994
+Elements of these vectors.
+
+361
+00:23:40,994 --> 00:23:44,192
+Then usually,
+we'll have our standard bias term and
+
+362
+00:23:44,192 --> 00:23:52,108
+we'll add a non-linearity at the end.
+
+363
+00:23:52,108 --> 00:24:11,340
+Any questions about.
+
+364
+00:24:11,340 --> 00:24:12,010
+That's a great question.
+
+365
+00:24:12,010 --> 00:24:17,060
+So, as you do this, the question is don't
+the words in the middle appear more often.
+
+366
+00:24:17,060 --> 00:24:21,620
+So here, actually show this example,
+and I have actually an animation, so
+
+367
+00:24:21,620 --> 00:24:22,640
+you are jumping a little bit ahead.
+
+368
+00:24:22,640 --> 00:24:26,250
+So what happens for instance,
+at the very end here, and
+
+369
+00:24:26,250 --> 00:24:31,990
+the answer will just come
+have zeros there for the end.
+
+370
+00:24:31,990 --> 00:24:37,180
+We'll actually call this
+a narrow convolution and
+
+371
+00:24:37,180 --> 00:24:39,890
+where you can actually have wide
+convolutions which we'll get to later,
+
+372
+00:24:39,890 --> 00:24:44,130
+but yes, you're right the center
+words will appear more often,
+
+373
+00:24:44,130 --> 00:24:48,860
+but really the filters can
+adapt to that because you learn
+
+374
+00:24:48,860 --> 00:24:59,182
+sort of how much you want to care about
+any particular input in the filter.
+
+375
+00:24:59,182 --> 00:25:01,698
+Okay, so
+let's define this more carefully so
+
+376
+00:25:01,698 --> 00:25:22,796
+we can think through the whole process,
+yeah?
+
+377
+00:25:22,796 --> 00:25:23,895
+So the question is,
+
+378
+00:25:23,895 --> 00:25:28,915
+rephrase it a little bit, what happens
+when we have different length sentences?
+
+379
+00:25:28,915 --> 00:25:32,935
+And there will actually be in two
+slides a very clever answer to that.
+
+380
+00:25:32,935 --> 00:25:36,195
+Which is at some point we'll
+add a pooling operator,
+
+381
+00:25:36,195 --> 00:25:39,415
+which will just look at the maximum
+value across everything.
+
+382
+00:25:39,415 --> 00:25:40,545
+We'll get to that in a second.
+
+383
+00:25:40,545 --> 00:25:43,065
+And it turns out the length
+
+384
+00:25:43,065 --> 00:25:51,310
+of the sentence doesn't matter that
+much once we do some clever pooling.
+
+385
+00:25:51,310 --> 00:25:54,060
+How's the size of the filtering
+affecting the learning?
+
+386
+00:25:54,060 --> 00:25:55,980
+Actually quite significantly.
+
+387
+00:25:55,980 --> 00:26:00,620
+One, the longer your filter is the more
+computation you have to do and
+
+388
+00:26:00,620 --> 00:26:02,350
+the longer context you can capture.
+
+389
+00:26:02,350 --> 00:26:05,710
+So for instance if you just had a one
+d filter it would just multiply and
+
+390
+00:26:05,710 --> 00:26:07,970
+matrix with every word vector and
+it actually would,
+
+391
+00:26:07,970 --> 00:26:12,120
+you wouldn't gain much, because it would
+just transform all the word vectors, and
+
+392
+00:26:12,120 --> 00:26:20,160
+you may as well store
+transformed word vectors.
+
+393
+00:26:20,160 --> 00:26:24,780
+As you go to longer filters, you'll
+actually be able to capture more phrases,
+
+394
+00:26:24,780 --> 00:26:28,480
+but now you'll also more
+likely to over-fit your model.
+
+395
+00:26:28,480 --> 00:26:33,030
+So that will actually be, the size of
+your filter will be hyperparameter, and
+
+396
+00:26:33,030 --> 00:26:33,870
+there are some tricks.
+
+397
+00:26:33,870 --> 00:26:35,790
+Namely, you have multiple filters for
+multiple lengths,
+
+398
+00:26:35,790 --> 00:26:42,737
+which we'll get to in a second, too,
+that will allow you to get rid of that.
+
+399
+00:26:42,737 --> 00:26:47,431
+Alright, so, let's say again here,
+we have our sentence,
+
+400
+00:26:47,431 --> 00:26:51,314
+now we have all these possible windows or
+length h,
+
+401
+00:26:51,314 --> 00:26:56,900
+starting at the first word vector,
+going to this, and so on.
+
+402
+00:26:56,900 --> 00:27:02,040
+And now what the means is, since we do
+this computation here at every time step,
+
+403
+00:27:02,040 --> 00:27:06,990
+we'll have basically what
+we call a feature map.
+
+404
+00:27:06,990 --> 00:27:10,130
+And we will capitalize this
+here as having a vector
+
+405
+00:27:10,130 --> 00:27:12,290
+of lots of these different c values.
+
+406
+00:27:12,290 --> 00:27:16,590
+And again, each c value was
+just taking that same w and
+
+407
+00:27:16,590 --> 00:27:21,780
+having inter-products with a bunch of
+the different windows at each time stamp.
+
+408
+00:27:21,780 --> 00:27:26,220
+Now, this c vector is going to be
+a pretty long, n-h+1 dimensional vector.
+
+409
+00:27:26,220 --> 00:27:32,230
+And it's actually going to
+be of different length,
+
+410
+00:27:32,230 --> 00:27:35,670
+depending on how many words we have.
+
+411
+00:27:35,670 --> 00:27:38,485
+Which is a little odd, right?
+
+412
+00:27:38,485 --> 00:27:42,390
+Because in the end, if we want to
+plug it into a softmise classifier,
+
+413
+00:27:42,390 --> 00:27:47,250
+we would want to have
+a fixed dimensional vector.
+
+414
+00:27:47,250 --> 00:27:52,990
+But, intuitively here, we'll just, again,
+multiply each of these numbers and
+
+415
+00:27:52,990 --> 00:27:56,480
+our w here with the concatenation,
+and remove along.
+
+416
+00:27:56,480 --> 00:27:58,430
+Turns out we'll zero pad.
+
+417
+00:27:58,430 --> 00:28:02,035
+And if you now think carefully, you'll
+actually realize, well, I kind of cheated
+
+418
+00:28:02,035 --> 00:28:04,560
+because really that's what we really
+should've done also on the left side.
+
+419
+00:28:04,560 --> 00:28:08,500
+So on the left side we will actually
+also zero pad the sentence.
+
+420
+00:28:08,500 --> 00:28:16,040
+So we do exactly the same in
+the beginning at the end of the sentence.
+
+421
+00:28:16,040 --> 00:28:21,117
+All right, now, because we have a variable
+length vector at this point, and we want
+
+422
+00:28:21,117 --> 00:28:26,054
+to have eventually a fixed dimensional
+feature vector that represents that whole
+
+423
+00:28:26,054 --> 00:28:31,276
+sentence, what we'll now do is introduce a
+new type of building block that we haven't
+
+424
+00:28:31,276 --> 00:28:37,040
+really looked at that much before, namely,
+a pooling operator or pooling layer.
+
+425
+00:28:37,040 --> 00:28:42,040
+And in particular, what we'll use
+here is a so-called max-over-time or
+
+426
+00:28:42,040 --> 00:28:44,110
+max pooling layer.
+
+427
+00:28:44,110 --> 00:28:45,700
+And it's a very simple idea,
+
+428
+00:28:45,700 --> 00:28:49,070
+namely that we're going to capture
+the most important activation.
+
+429
+00:28:49,070 --> 00:28:54,700
+So as you have different elements
+figured computed for every window,
+
+430
+00:28:54,700 --> 00:28:58,710
+you have the hope that the inner
+product would be particularly large for
+
+431
+00:28:58,710 --> 00:29:03,350
+that filter, if it sees a certain
+kind of phrase, all right?
+
+432
+00:29:03,350 --> 00:29:08,330
+So, namely, if you have, let's say your
+word vectors are relatively normalized,
+
+433
+00:29:08,330 --> 00:29:13,170
+if you do an inner product,
+you would want to have a very large cosine
+
+434
+00:29:13,170 --> 00:29:16,870
+similarity between the filter and the
+certain pattern that you're looking for.
+
+435
+00:29:16,870 --> 00:29:20,080
+And that one filter would only be
+good at picking up that pattern.
+
+436
+00:29:20,080 --> 00:29:23,240
+So for instance,
+you might hope all your positive words
+
+437
+00:29:23,240 --> 00:29:28,560
+are in one part of the vector space and
+now you have a two dimensional,
+
+438
+00:29:28,560 --> 00:29:33,300
+sorry a two word vector, sorry.
+
+439
+00:29:33,300 --> 00:29:37,250
+A filter size of length two
+that looks at bigrams, and
+
+440
+00:29:37,250 --> 00:29:40,360
+you want to ideally have
+that filter be very good and
+
+441
+00:29:40,360 --> 00:29:44,790
+have a very large inner product with
+all the words that are positive.
+
+442
+00:29:44,790 --> 00:29:49,990
+And that would then be captured by having
+one of these numbers be very large.
+
+443
+00:29:49,990 --> 00:29:55,060
+And so what this intuitively allows
+you to do is, as you move over it and
+
+444
+00:29:55,060 --> 00:29:59,400
+you then in the end max pool,
+if you just have one word pair,
+
+445
+00:29:59,400 --> 00:30:04,260
+one biagram that it has a very large
+activation for that particular filter w,
+
+446
+00:30:04,260 --> 00:30:09,830
+you will basically get
+that to your c hat here.
+
+447
+00:30:09,830 --> 00:30:12,950
+And it can ignore all
+the rest of the sentence.
+
+448
+00:30:12,950 --> 00:30:17,120
+It's just going to be able to pick
+out one particular bigram very,
+
+449
+00:30:17,120 --> 00:30:19,300
+very accurately, or a type of bigram.
+
+450
+00:30:19,300 --> 00:30:22,250
+And because word vectors cluster and
+
+451
+00:30:22,250 --> 00:30:25,410
+where similar kinds of words
+have similar kinds of meaning,
+
+452
+00:30:25,410 --> 00:30:31,230
+you might hope that all the positive words
+will activate a similar kind of filter.
+
+453
+00:30:31,230 --> 00:30:34,700
+Now the problem with this is, of course,
+that that is just a single number, right?
+
+454
+00:30:34,700 --> 00:30:39,940
+C hat is just a maximum number here
+of all the elements in this vector.
+
+455
+00:30:39,940 --> 00:30:42,390
+So I would just be five.
+
+456
+00:30:42,390 --> 00:30:44,533
+So that could be one activation.
+
+457
+00:30:44,533 --> 00:30:49,510
+If we use a relu nonlinearity here,
+this will just be a single number.
+
+458
+00:30:49,510 --> 00:30:54,316
+So c hat is just that.
+
+459
+00:30:54,316 --> 00:30:59,178
+Now of course, we want to be able to do
+more than just find one particular type of
+
+460
+00:30:59,178 --> 00:31:04,460
+bigram or trigram, we want to have many
+more features that we can extract.
+
+461
+00:31:04,460 --> 00:31:07,020
+And that's why we're going
+to have multiple filters w.
+
+462
+00:31:07,020 --> 00:31:09,730
+So instead of just convolving
+a single feature w,
+
+463
+00:31:09,730 --> 00:31:12,660
+we'll convolve multiple of them.
+
+464
+00:31:12,660 --> 00:31:14,240
+And as we train this model,
+
+465
+00:31:14,240 --> 00:31:20,180
+eventually we hope that some of the w
+filters will fire and be very active and
+
+466
+00:31:20,180 --> 00:31:25,373
+have very large inter-products with
+particular types of bigrams or
+
+467
+00:31:25,373 --> 00:31:32,225
+trigrams, or even four grams.
+
+468
+00:31:32,225 --> 00:31:36,336
+So it's also very useful to have some
+filters that only pick out bigrams and
+
+469
+00:31:36,336 --> 00:31:38,690
+you can actually get quite far with that.
+
+470
+00:31:38,690 --> 00:31:43,120
+But then maybe you have someone,
+some examples where you say for
+
+471
+00:31:43,120 --> 00:31:48,300
+sentiment again very simply example
+it's not very good or risk missing
+
+472
+00:31:48,300 --> 00:31:53,530
+a much originality and
+now you want to have diagrams in filters
+
+473
+00:31:53,530 --> 00:31:58,437
+of length K times 3.
+
+474
+00:31:58,437 --> 00:32:02,942
+And so, we can have multiple different
+window sizes and at the end, each time we
+
+475
+00:32:02,942 --> 00:32:07,127
+convolve that filter and we do all
+these inner products at each time step.
+
+476
+00:32:07,127 --> 00:32:22,941
+We'll basically max pool to get a single
+number for that filter for that sentence.
+
+477
+00:32:22,941 --> 00:32:25,088
+If we have different filters
+of different lengths,
+
+478
+00:32:25,088 --> 00:32:27,550
+how do we make sure they
+learn different feature?
+
+479
+00:32:27,550 --> 00:32:29,830
+Of same length or different lengths, yeah.
+
+480
+00:32:29,830 --> 00:32:33,450
+Of same length, how do we make sure
+they learn different features?
+
+481
+00:32:33,450 --> 00:32:37,760
+Well, they all start at different
+random initializations, so
+
+482
+00:32:37,760 --> 00:32:39,310
+that helps to break up some symmetry.
+
+483
+00:32:39,310 --> 00:32:42,270
+And then actually we don't have
+to do anything in particular
+
+484
+00:32:42,270 --> 00:32:45,470
+to make sure that happens,
+it actually just happens.
+
+485
+00:32:45,470 --> 00:32:48,222
+So as we do SGD,
+from the random initializations,
+
+486
+00:32:48,222 --> 00:32:52,318
+different filters will move and start
+to pick up different patterns in order
+
+487
+00:32:52,318 --> 00:32:54,818
+to maximize our overall
+objective function.
+
+488
+00:32:54,818 --> 00:33:01,584
+Which we'll get to,
+it'll just be logistic regression.
+
+489
+00:33:01,584 --> 00:33:03,667
+They would probably still
+learn different values, yeah.
+
+490
+00:33:03,667 --> 00:33:08,711
+You update so in the beginning,
+well, if they're exactly the same,
+
+491
+00:33:08,711 --> 00:33:13,156
+basically, as you pool, right,
+you will eventually pick,
+
+492
+00:33:13,156 --> 00:33:17,340
+during backpropagation,
+the max value here.
+
+493
+00:33:17,340 --> 00:33:20,817
+The max value will come,
+eventually, from a specific filter.
+
+494
+00:33:20,817 --> 00:33:24,567
+And if they have the exact same,
+one, you would never do it.
+
+495
+00:33:24,567 --> 00:33:27,610
+But two, if you did,
+they would have the exact same value.
+
+496
+00:33:27,610 --> 00:33:32,738
+And then your computer will have to
+choose, randomly, one to be the max.
+
+497
+00:33:32,738 --> 00:33:35,540
+And if they're just the same,
+whatever, it'll pick one and
+
+498
+00:33:35,540 --> 00:33:38,080
+then it'll backpropagate
+through that particular filter.
+
+499
+00:33:38,080 --> 00:33:38,670
+And then,
+
+500
+00:33:38,670 --> 00:33:43,468
+they're also going to be different in the
+iteration of your optimization algorithm.
+
+501
+00:33:43,468 --> 00:33:45,447
+Yeah?
+
+502
+00:33:45,447 --> 00:33:49,890
+>> Is there a reason why
+we do the max [INAUDIBLE]?
+
+503
+00:33:49,890 --> 00:33:51,630
+>> Is there a reason why we do the max?
+
+504
+00:33:51,630 --> 00:33:55,510
+So in theory nothing would
+prevent us from using min too.
+
+505
+00:33:55,510 --> 00:34:01,070
+Though we in many cases use rectified
+linear units which will be max 0x.
+
+506
+00:34:01,070 --> 00:34:06,748
+And so max pooling makes a lot more
+sense cuz min will often just be 0.
+
+507
+00:34:06,748 --> 00:34:08,641
+And so, we've rallies together,
+
+508
+00:34:08,641 --> 00:34:16,703
+it makes the most sense to use
+the max pooling layer also.
+
+509
+00:34:16,703 --> 00:34:18,080
+Could we use average pooling?
+
+510
+00:34:18,080 --> 00:34:22,635
+It's actually not totally crazy,
+there are different papers that explore
+
+511
+00:34:22,635 --> 00:34:27,547
+different pooling schemes and there's no
+sort of beautiful mathematical reason
+
+512
+00:34:27,547 --> 00:34:32,029
+of why one should work better but
+intuitively what you're trying to do here
+
+513
+00:34:32,029 --> 00:34:36,109
+is you try to really just fire when
+you see a specific type of engram.
+
+514
+00:34:36,109 --> 00:34:38,695
+And when you see that
+particular type of engram,
+
+515
+00:34:38,695 --> 00:34:42,876
+cuz that filter fired very strongly for
+it, then you wanna say this happened.
+
+516
+00:34:42,876 --> 00:34:47,910
+And you want to give that signal
+to the next higher layer.
+
+517
+00:34:47,910 --> 00:34:52,340
+And so that is particularly easy if you
+choose a specific single value versus
+
+518
+00:34:52,340 --> 00:34:55,380
+averaging, where you kind of
+conglomerate everything again.
+
+519
+00:34:55,380 --> 00:34:59,088
+And the strong signal that you may get
+from one particular unigram, or bigram, or
+
+520
+00:34:59,088 --> 00:35:15,296
+trigram, might get washed
+out in the average.
+
+521
+00:35:15,296 --> 00:35:19,963
+Great question, so once we have a bunch of
+different c hats from each of the filters,
+
+522
+00:35:19,963 --> 00:35:21,300
+how do we combine them?
+
+523
+00:35:21,300 --> 00:35:23,980
+And the answer will be,
+we'll just concatenate all them.
+
+524
+00:35:23,980 --> 00:35:32,925
+We'll get to that in a second.
+
+525
+00:35:32,925 --> 00:35:37,244
+Yeah, so the main idea is once you do
+max pooling one of the values will
+
+526
+00:35:37,244 --> 00:35:42,234
+be the maximum and then all of the other
+ones will basically have 0 gradients cuz
+
+527
+00:35:42,234 --> 00:35:46,851
+they don't change the layer above,
+and then you just flow your gradients
+
+528
+00:35:46,851 --> 00:36:17,990
+through the maximum value
+that triggered that filter.
+
+529
+00:36:17,990 --> 00:36:21,371
+So the question is, doesn't that make
+our initialization very important, and
+
+530
+00:36:21,371 --> 00:36:22,974
+lead to lots of downstream problems?
+
+531
+00:36:22,974 --> 00:36:25,692
+And the answer is yes,
+so likewise if you, for
+
+532
+00:36:25,692 --> 00:36:29,811
+instance, initialize all your filter
+weights such as your rectified
+
+533
+00:36:29,811 --> 00:36:34,440
+linear units all return zero then,
+you're not gonna learn anything.
+
+534
+00:36:34,440 --> 00:36:38,174
+So you have to initialize your
+weights such that in the beginning,
+
+535
+00:36:38,174 --> 00:36:41,917
+most of your units are active and
+something will actually happen.
+
+536
+00:36:41,917 --> 00:36:47,269
+And then the main trick to, or the way,
+the reason why it doesn’t hurt
+
+537
+00:36:47,269 --> 00:36:52,741
+a ton to have these different
+randomizations, you have lots filters.
+
+538
+00:36:52,741 --> 00:36:56,218
+And each filter can start to pick up
+different kinds of signals during
+
+539
+00:36:56,218 --> 00:36:57,980
+the optimization.
+
+540
+00:36:57,980 --> 00:37:01,010
+But, in general, yes,
+these models are highly non-convex and
+
+541
+00:37:01,010 --> 00:37:04,120
+if you initialize them incorrectly,
+they won’t learn anything.
+
+542
+00:37:04,120 --> 00:37:06,707
+But we have relatively
+stable initialization
+
+543
+00:37:06,707 --> 00:37:12,823
+schemes at this point that
+just work in most cases.
+
+544
+00:37:12,823 --> 00:37:16,250
+Great questions, all right I like it.
+
+545
+00:37:16,250 --> 00:37:23,576
+All right, so we basically now have,
+we're almost at the final model.
+
+546
+00:37:23,576 --> 00:37:26,049
+But there's another idea here And
+
+547
+00:37:26,049 --> 00:37:32,390
+that combines what we've learned about
+word vectors, but extends it a little bit.
+
+548
+00:37:32,390 --> 00:37:38,010
+And namely, instead of representing the
+sentence only as a single concatenation
+
+549
+00:37:38,010 --> 00:37:41,310
+of all the word vectors, we'll actually
+start with two copies of that.
+
+550
+00:37:41,310 --> 00:37:45,125
+And then we're going to backpropagate into
+
+551
+00:37:45,125 --> 00:37:49,361
+one of these two channels and
+not into the other.
+
+552
+00:37:49,361 --> 00:37:51,420
+So why do we do this?
+
+553
+00:37:51,420 --> 00:37:54,954
+Remember we had this lecture where
+I talked about the television and
+
+554
+00:37:54,954 --> 00:37:58,054
+the telly, and
+as you back-propagate into word vectors,
+
+555
+00:37:58,054 --> 00:38:01,783
+they start to move away from their
+Glove or word2vec initialization.
+
+556
+00:38:01,783 --> 00:38:05,450
+So again, just quick recap,
+word vectors are really great.
+
+557
+00:38:05,450 --> 00:38:07,927
+We can train them on a very
+large unsupervised scope so
+
+558
+00:38:07,927 --> 00:38:09,782
+they capture semantic similarities.
+
+559
+00:38:09,782 --> 00:38:14,590
+Now if you start backpropagating your
+specific task into the word vectors,
+
+560
+00:38:14,590 --> 00:38:16,270
+they will start to move around.
+
+561
+00:38:16,270 --> 00:38:21,116
+When you see that word vector in your
+supervised classification problem in that
+
+562
+00:38:21,116 --> 00:38:21,778
+dataset.
+
+563
+00:38:21,778 --> 00:38:25,179
+Now what that means is as you
+push certain vectors that you see
+
+564
+00:38:25,179 --> 00:38:27,647
+in your training data sets somewhere else,
+
+565
+00:38:27,647 --> 00:38:32,049
+the vectors that you don't see in your
+training data set stay where they are and
+
+566
+00:38:32,049 --> 00:38:35,662
+now might get misclassified if
+they only appear in the test set.
+
+567
+00:38:35,662 --> 00:38:40,136
+So by having these two channels We'll
+basically try to have some of the goodness
+
+568
+00:38:40,136 --> 00:38:41,405
+of really trainings,
+
+569
+00:38:41,405 --> 00:38:45,400
+the first copy of the word vectors
+to be really good on that task.
+
+570
+00:38:45,400 --> 00:38:49,571
+But the second set of word vectors to
+stay where they are, have the good, nice,
+
+571
+00:38:49,571 --> 00:38:53,870
+general semantic similarities in vector
+space goodness that we have from unlarge
+
+572
+00:38:53,870 --> 00:38:59,504
+and supervised word vectors.
+
+573
+00:38:59,504 --> 00:39:03,675
+And in this case here, both of these
+channels are actually going to be added to
+
+574
+00:39:03,675 --> 00:39:08,054
+each of the CIs before we max-pool, so
+we will pool over both of those channels.
+
+575
+00:39:08,054 --> 00:39:14,028
+Now, the final model, and this is the
+simplest, one I'll get to you in a second.
+
+576
+00:39:14,028 --> 00:39:18,342
+Is basic just concatenating
+all this c hats,
+
+577
+00:39:18,342 --> 00:39:24,620
+so remember each c hats
+was one max pool filter.
+
+578
+00:39:24,620 --> 00:39:29,060
+And we have this case here
+that say m many filters.
+
+579
+00:39:29,060 --> 00:39:31,360
+And so our final feature vector for
+
+580
+00:39:31,360 --> 00:39:36,670
+that sentence,
+has just an r n-dimensional vector,
+
+581
+00:39:36,670 --> 00:39:41,910
+where we have m many different fil
